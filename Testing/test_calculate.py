@@ -45,3 +45,13 @@ def test_magnitude_2d():
 
 def test_normalize_2d():
     assert calculate.normalize_2d([2, 2])
+
+
+def test_points_inside_contour_numpy_scalars():
+    contour = np.array([[[0, 0]], [[10, 0]], [[10, 10]], [[0, 10]]], dtype=np.int32)
+    for dtype in (np.int32, np.int64, np.float32, np.float64):
+        assert calculate.points_inside_contour(np.array([[5, 5]], dtype=dtype), contour)
+        assert not calculate.points_inside_contour(np.array([[15, 5]], dtype=dtype), contour)
+        assert not calculate.points_inside_contour(np.array([[0, 5]], dtype=dtype), contour)
+    assert calculate.points_inside_contour([(15, 5), (5, 5)], contour)
+    assert not calculate.points_inside_contour([], contour)
