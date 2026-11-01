@@ -87,21 +87,25 @@ def scale_model_point_to_origin(origin, point, x_scale, y_scale):
 
 def flatten_iterative_safe(thelist, res):
     """
-    Flatten iterative safe
-    A iterative flatten function using types to specify depths, handling empty elements
-    Useful when flattening floorplan verts
+    Flatten numeric leaves of nested lists in traversal order without recursion.
+    Preserve the existing list-only traversal and int/float filtering.
     @Param thelist, incoming list
     @Param res, resulting list, preferably []
     """
-    if not thelist or not isinstance(thelist, list):
+    if not isinstance(thelist, list):
         return res
-    else:
-        if isinstance(thelist[0], int) or isinstance(thelist[0], float):
-            res.append(thelist[0])
-            return flatten_iterative_safe(thelist[1:], res)
-        else:
-            res.extend(flatten_iterative_safe(thelist[0], []))
-            return flatten_iterative_safe(thelist[1:], res)
+    stack = [iter(thelist)]
+    while stack:
+        try:
+            item = next(stack[-1])
+        except StopIteration:
+            stack.pop()
+            continue
+        if isinstance(item, list):
+            stack.append(iter(item))
+        elif isinstance(item, int) or isinstance(item, float):
+            res.append(item)
+    return res
 
 
 def verts_to_poslist(verts):

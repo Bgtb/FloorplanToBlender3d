@@ -46,3 +46,70 @@ def test_create_nx4_verts_and_faces():
 
 def test_create_verts():
     assert transform.create_verts([[[(2, 3)]], [[(1, 0)]]], 1, 2)
+
+
+def test_flatten_iterative_safe_preserves_order_types_and_input():
+    import copy
+
+    values = [[], [1, [2.5, [], -3]], True, "skip", None, (8, 9), [4]]
+    original = copy.deepcopy(values)
+    seed = [99]
+    result = transform.flatten_iterative_safe(values, seed)
+    assert result is seed
+    assert result == [99, 1, 2.5, -3, True, 4]
+    assert [type(value) for value in result] == [int, int, float, int, bool, int]
+    assert values == original
+    for value in (None, 7, (1, 2), "skip"):
+        seed = [99]
+        assert transform.flatten_iterative_safe(value, seed) is seed
+        assert seed == [99]
+
+
+def test_flatten_iterative_safe_matches_recursive_reference():
+    import random
+
+    def reference(values, result):
+        if not isinstance(values, list):
+            return result
+        for value in values:
+            if isinstance(value, list):
+                reference(value, result)
+            elif isinstance(value, int) or isinstance(value, float):
+                result.append(value)
+        return result
+
+    rng = random.Random(45)
+
+    def nested(depth):
+        leaves = [None, "skip", (1, 2), False, -7, 2.5, 0]
+        return [
+            nested(depth - 1) if depth and rng.randrange(3) == 0
+            else rng.choice(leaves)
+            for _ in range(rng.randrange(8))
+        ]
+
+    for _ in range(100):
+        values = nested(5)
+        assert transform.flatten_iterative_safe(values, []) == reference(values, [])
+
+
+def test_verts_to_poslist_exact_order_and_empty_lists():
+    values = [[], [[[1, 2, 3], [], [4.5, 5, 6]]], [[7, 8, 9]]]
+    assert transform.verts_to_poslist(values) == [
+        [1, 2, 3], [4.5, 5, 6], [7, 8, 9]
+    ]
+    assert transform.verts_to_poslist([]) == []
+
+
+def test_flatten_iterative_safe_wide_and_deep():
+    import sys
+
+    count = sys.getrecursionlimit() + 100
+    wide = [[1, 2, 3] for _ in range(count)]
+    assert transform.flatten_iterative_safe(wide, []) == [1, 2, 3] * count
+    assert transform.verts_to_poslist(wide) == wide
+    deep = [1, 2, 3]
+    for _ in range(count):
+        deep = [deep]
+    assert transform.flatten_iterative_safe(deep, []) == [1, 2, 3]
+    assert transform.verts_to_poslist(deep) == [[1, 2, 3]]
